@@ -57,8 +57,6 @@ class TestEvt(ct.Structure):
         ("tablename",   ct.c_char * XT_TABLE_MAXNAMELEN),
     ]
 
-PING_PID="-1"
-TARGET=''
 
 def _get(l, index, default):
     '''
@@ -134,24 +132,10 @@ if __name__ == "__main__":
     b = BPF(src_file='tracepkt.c')
     b["route_evt"].open_perf_buffer(event_printer)
 
-    # Launch a background ping process
-    with open('/dev/null', 'r') as devnull:
-        ping = subprocess.Popen([
-                '/bin/ping',
-                '-c1',
-                TARGET,
-            ],
-            stdout=devnull,
-            stderr=devnull,
-            close_fds=True,
-        )
-    PING_PID = ping.pid
-
     print ("%14s %16s %7s %-34s %s" % ('NETWORK NS', 'INTERFACE', 'TYPE', 'ADDRESSES', 'IPTABLES'))
 
-    # Listen for event until the ping process has exited
-    while ping.poll() is None:
-        b.kprobe_poll(10)
+    while True:
+        b.kprobe_poll()
 
     # Forward ping's exit code
     sys.exit(ping.poll())
