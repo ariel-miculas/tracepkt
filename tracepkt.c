@@ -198,6 +198,7 @@ TRACEPOINT_PROBE(net, netif_rx)
 
 TRACEPOINT_PROBE(net, net_dev_queue)
 {
+    bpf_trace_printk("ana");
     return do_trace(args, (struct sk_buff *)args->skbaddr);
 }
 

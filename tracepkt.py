@@ -58,6 +58,7 @@ class TestEvt(ct.Structure):
     ]
 
 PING_PID="-1"
+TARGET=''
 
 def _get(l, index, default):
     '''
@@ -75,9 +76,12 @@ def event_printer(cpu, data, size):
     if event.flags & ROUTE_EVT_IF != ROUTE_EVT_IF:
         return
 
-    # Make sure it is OUR ping process
-    if event.icmpid != PING_PID:
-        return
+
+    # # Make sure it is OUR ping process
+    # if event.icmpid != PING_PID:
+    #     print(f"{hex(event.icmpid)} != {hex(PING_PID)}")
+    #     return
+
 
     # Decode address
     if event.ip_version == 4:
@@ -97,6 +101,12 @@ def event_printer(cpu, data, size):
     else:
         return
 
+    if direction == "request" and daddr != TARGET:
+        return
+
+    if direction == "reply" and saddr != TARGET:
+        return
+
     # Decode flow
     flow = "%s -> %s" % (saddr, daddr)
 
@@ -105,10 +115,10 @@ def event_printer(cpu, data, size):
     if event.flags & ROUTE_EVT_IPTABLE == ROUTE_EVT_IPTABLE:
         verdict = _get(NF_VERDICT_NAME, event.verdict, "~UNK~")
         hook = _get(HOOKNAMES, event.hook, "~UNK~")
-        iptables = " %7s.%-12s:%s" % (event.tablename, hook, verdict)
+        iptables = " %7s.%-12s:%s" % (event.tablename.decode("UTF-8"), hook, verdict)
 
     # Print event
-    print "[%12s] %16s %7s %-34s%s" % (event.netns, event.ifname, direction, flow, iptables)
+    print ("[%12s] %16s %7s %-34s%s" % (event.netns, event.ifname.decode("UTF-8"), direction, flow, iptables))
 
 if __name__ == "__main__":
     # Get arguments
@@ -117,7 +127,7 @@ if __name__ == "__main__":
     elif len(sys.argv) == 2:
         TARGET = sys.argv[1]
     else:
-        print "Usage: %s [TARGET_IP]" % (sys.argv[0])
+        print ("Usage: %s [TARGET_IP]" % (sys.argv[0]))
         sys.exit(1)
 
     # Build probe and open event buffer
@@ -137,7 +147,7 @@ if __name__ == "__main__":
         )
     PING_PID = ping.pid
 
-    print "%14s %16s %7s %-34s %s" % ('NETWORK NS', 'INTERFACE', 'TYPE', 'ADDRESSES', 'IPTABLES')
+    print ("%14s %16s %7s %-34s %s" % ('NETWORK NS', 'INTERFACE', 'TYPE', 'ADDRESSES', 'IPTABLES'))
 
     # Listen for event until the ping process has exited
     while ping.poll() is None:
